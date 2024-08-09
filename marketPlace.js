@@ -1,24 +1,83 @@
 function main() {
+  const discomdiv = document.getElementById("check-discom");
+  discomdiv.style.display = "flex"
+  const location = localStorage.getItem("location");
+  const getDiscom = getCookie("discomValue")
+  if (getDiscom !== null) {
+    document.getElementById('discom-header-value').textContent = getDiscom;
+  }
+  if (location !== null) {
+    const locationElement = document.querySelector('.text-block-184');
+    if (locationElement) {
+      locationElement.textContent = location;
+    }
+    const locationElement2 = document.querySelector('.bold-text-19');
+    if (locationElement2) {
+      locationElement2.textContent = location;
+
+      const formWrapper = document.getElementById('form-input');
+      const dropdownWrapper = document.getElementById('dropdown-input');
+      console.log("from div");
+      console.log(formWrapper)
+
+      if (location === "delhi") {
+        // Show the input field and hide the dropdown
+        formWrapper.style.display = 'block';
+        dropdownWrapper.style.display = 'none';
+      } else {
+        // Show the dropdown and hide the input field
+        formWrapper.style.display = 'none';
+        dropdownWrapper.style.display = 'block';
+      }
+    }
+  }
+
   const url = window.location.search;
-  console.log("main function")
   const cleanedUrl = url.startsWith('?') ? url.substring(1) : url;
   const paramsObject = convertURL(cleanedUrl);
+  console.log(paramsObject)
   showFilter(paramsObject)
+  markCheck(paramsObject)
   dynamicQuery(paramsObject)
 }
 
 async function dynamicQuery(filters) {
+  const location = localStorage.getItem("location");
+  let table = "products";
+  if (location === "delhi") {
+    table = "products"
+  } else {
+    table = "kerala_products"
+  }
+
   console.log(filters)
   let query = window.supabaseClient
-    .from("products")
+    .from(table)
     .select("*")
+  const getDiscom = getCookie("discomValue")
+  if (getDiscom) {
+    if (location === "delhi") {
+      const disCom = getEnergyBoard(getDiscom);
+      query.eq("core_discom", disCom)
+    } else {
+      query.like("core_vendor_district", `%${getDiscom}%`)
+
+    }
+  }
+
+
   filters.forEach(condition => {
     const [key, value] = Object.entries(condition)[0];
-    console.log(`eq("${key}","${value}")`)
-    query = query.eq(key, value)
-    console.log(query)
+    if (Array.isArray(value)) {
+      // Use .in() for array values
+      query = query.in(key, value);
+    } else {
+      // Use .eq() for single values
+      query = query.eq(key, value);
+    }
+    console.log(query);
   });
-  const { data, error } = await query.limit(10);
+  const { data, error } = await query.limit(25);
 
   if (error) {
     console.error("Error fetching data:", error);
@@ -363,44 +422,66 @@ function getEnergyBoard(pincode) {
 main()
 
 function markCheck(paramsObject) {
-  console.log(" mark check check check")
   paramsObject.forEach(obj => {
-    const key = Object.keys(obj);
+    const key = Object.keys(obj)[0];
     const value = obj[key];
-    console.log("value" + value)
-    const div = document.getElementById(value);
-    console.log(div)
-    div.style.backgroundColor = 'black';
+    console.log("value: " + value);
+
+    if (Array.isArray(value)) {
+      // If the value is an array, iterate over each item
+      value.forEach(item => {
+        const div = document.getElementById(item);
+        if (div) {
+          div.style.backgroundColor = 'black';
+        }
+      });
+    } else {
+      // If the value is not an array, directly use it
+      const div = document.getElementById(value);
+      if (div) {
+        div.style.backgroundColor = 'black';
+      }
+    }
   });
-
-
-
 }
 
+
 function showFilter(paramsObject) {
-
   const divBlock166 = document.getElementsByClassName("div-block-166");
-
   if (divBlock166) {
     paramsObject.forEach(obj => {
       const key = Object.keys(obj)[0];  // Assuming each object has one key-value pair
       const value = obj[key];
 
       for (let i = 0; i < divBlock166.length; i++) {
+        divBlock166[i].style.overflow = "auto";
+
+        const filterChip = document.createElement("div");
+
+        filterChip.className = "filter-chip"; // Create the filter-chip div
+
         const filterName = document.createElement("div");
         filterName.className = "text-block-181";
-        filterName.innerText = value;
-        // filterName.innerHTML = `<svg width="18px" height="18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M16 8L8 16M8.00001 8L16 16M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#033e4d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>` // Set the value as inner text
-        divBlock166[i].appendChild(filterName);  // Append the new div to the current div-block-166
+        filterName.style.display = "flex";
+        filterName.style.alignItems = "center";
+        filterName.style.gap = "3px";
+        filterName.style.cursor = "pointer";
+        // Setting the text content based on the length of the value
+        const printValue = value.length == 1 ? value + "kw" : value;
+        filterName.innerHTML = `<strong>${printValue}</strong>`;
+        // `<svg fill="#033e4d" width="18px" height="18px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" stroke="#b5b5b5"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>cross-round</title> <path d="M0 16q0 3.264 1.28 6.208t3.392 5.12 5.12 3.424 6.208 1.248 6.208-1.248 5.12-3.424 3.392-5.12 1.28-6.208-1.28-6.208-3.392-5.12-5.088-3.392-6.24-1.28q-3.264 0-6.208 1.28t-5.12 3.392-3.392 5.12-1.28 6.208zM4 16q0-3.264 1.6-6.016t4.384-4.352 6.016-1.632 6.016 1.632 4.384 4.352 1.6 6.016-1.6 6.048-4.384 4.352-6.016 1.6-6.016-1.6-4.384-4.352-1.6-6.048zM9.76 20.256q0 0.832 0.576 1.408t1.44 0.608 1.408-0.608l2.816-2.816 2.816 2.816q0.576 0.608 1.408 0.608t1.44-0.608 0.576-1.408-0.576-1.408l-2.848-2.848 2.848-2.816q0.576-0.576 0.576-1.408t-0.576-1.408-1.44-0.608-1.408 0.608l-2.816 2.816-2.816-2.816q-0.576-0.608-1.408-0.608t-1.44 0.608-0.576 1.408 0.576 1.408l2.848 2.816-2.848 2.848q-0.576 0.576-0.576 1.408z"></path> </g></svg>`
+
+        filterChip.appendChild(filterName); // Append text-block-181 to filter-chip
+        divBlock166[i].appendChild(filterChip); // Append filter-chip to div-block-166
       }
     });
   }
 }
 
+
 const sidebar = document.getElementById("sideBar");
 
 document.getElementById("closeSideBar").addEventListener("click", () => {
-  console.log("close button");
   if (window.innerWidth < 768) {
     const sidebar = document.getElementById("sideBar");
     if (sidebar) {
@@ -425,12 +506,10 @@ document.getElementById("openSidebar").addEventListener("click", () => {
 function handleDivClick(event) {
 
   const clickedElement = event.target;
-  console.log(clickedElement);
   checkButton()
   if (clickedElement.hasAttribute("el-filter")) {
     const elFilterValue = clickedElement.getAttribute("el-filter");
     const id = clickedElement.getAttribute("id");
-    console.log(elFilterValue, id);
     createUrl(elFilterValue, id);
     return elFilterValue;
   }
@@ -447,11 +526,7 @@ let finalURl
 
 // Function to create URL parameters
 function createUrl(elFilterValue, value) {
-  console.log("Initial elFilterValue:", elFilterValue);
-
   let param = null;
-
-  // Loop through the urlParams array to find the parameter with the key elFilterValue
   for (let item of urlParams) {
     if (item[elFilterValue]) {
       param = item;
@@ -460,23 +535,17 @@ function createUrl(elFilterValue, value) {
   }
 
   if (param) {
-    // If the key exists, push the new value to the existing array if not already present
     if (!param[elFilterValue].includes(value)) {
       param[elFilterValue].push(value);
     }
   } else {
-    // If the key doesn't exist, create a new entry
     let newParam = {};
     newParam[elFilterValue] = [value];
-
-    // Add the newParam object to the urlParams array
     urlParams.push(newParam);
-
     console.log("Updated urlParams:", urlParams);
   }
 
   console.log(urlParams);
-
   markCheck(urlParams)
 
   serachFilter();
@@ -496,7 +565,6 @@ function serachFilter() {
 }
 
 document.getElementById('search-url').addEventListener('click', function() {
-  console.log("hit url")
   location.href = finalURl;
 });
 
@@ -701,5 +769,178 @@ function checkButton() {
   } else {
     document.getElementById("closeSideBar").style.display = "block";
     document.getElementById("search-url").style.display = "none";
+  }
+}
+
+
+
+
+
+document.getElementById('check-discom').addEventListener('click', function() {
+
+  const divBlock = document.querySelector('.div-block-169');
+  const location = localStorage.getItem("location");
+
+  if (location !== null) {
+    const locationElement = document.querySelector('.bold-text-19');
+    if (locationElement) {
+      locationElement.textContent = location;
+
+      const formWrapper = document.getElementById('form-input');
+      const dropdownWrapper = document.getElementById('dropdown-input');
+      console.log("from div");
+      console.log(formWrapper)
+      const district = [
+        "Kannur",
+        "Wayanad",
+        "Malappuram",
+        "Palakkad",
+        "Thrissur",
+        "Pathanamthitta",
+        "Alappuzha",
+        "Kollam",
+        "Thiruvananthapuram"
+      ];
+      if (location === "delhi") {
+        // Show the input field and hide the dropdown
+        formWrapper.style.display = 'block';
+        dropdownWrapper.style.display = 'none';
+      } else {
+        // Show the dropdown and hide the input field
+        formWrapper.style.display = 'none';
+        dropdownWrapper.style.display = 'block';
+        // Clear previous content in dropdownWrapper
+        dropdownWrapper.innerHTML = '';
+
+        // Create a select element
+        const select = document.createElement('select');
+        select.className = 'custom-select';
+        select.id = "dropdown-option" // You can add a custom class for styling
+        // Apply styles to the select element
+        select.style.width = '280px';
+        select.style.height = '30px';         // Set the width of the dropdown
+        // Set the width of the dropdown
+        select.style.borderRadius = '30px';
+        // Create option elements for each district
+        district.forEach(districtName => {
+          const option = document.createElement('option');
+          option.style.width = "280px"
+          option.style.rediouse = "30px"
+          option.value = districtName;
+          option.textContent = districtName;
+          select.appendChild(option);
+        });
+
+        // Append the select element to the dropdownWrapper
+        dropdownWrapper.appendChild(select);
+
+      }
+    }
+  }
+  console.log(divBlock)
+  divBlock.style.display = 'flex'
+  if (divBlock.style.display) {
+    divBlock.style.display = 'flex';
+  } else {
+    divBlock.style.display = 'flex';
+  }
+  keralaCode()
+});
+
+
+// document.getElementById("pincode-submit").addEventListener("click", function() {
+//   const pincodeValue = document.getElementById("pincode-input").value;
+//   if (pincodeValue) {
+//     localStorage.setItem("discomValue", pincodeValue);
+//   }
+
+//   console.log("Pincode saved to localStorage:", pincodeValue);
+//   const divBlock = document.querySelector('.div-block-169');
+//   divBlock.style.display = 'none';
+// });
+// function keralaCode() {
+//   const dropdown = document.getElementById("dropdown-option");
+
+//   if (dropdown) {
+//     // Retrieve and set the saved value on page load
+//     const savedValue = localStorage.getItem("discomValue");
+//     if (savedValue) {
+//       dropdown.value = savedValue;
+//       const divBlock = document.querySelector('.div-block-169');
+//       divBlock.style.display = 'none'; // Apply the same logic if needed
+//     }
+
+//     dropdown.addEventListener("change", function() {
+//       console.log("Dropdown value changed");
+//       const selectedValue = this.value;
+//       if (selectedValue) {
+//         localStorage.setItem("discomValue", selectedValue);
+
+//       }
+//       console.log("Dropdown value saved to localStorage:", selectedValue);
+
+//       const divBlock = document.querySelector('.div-block-169');
+//       divBlock.style.display = 'none';
+//     });
+//   } else {
+//     console.error("Dropdown element not found");
+//   }
+// }
+
+// Helper functions to set and get cookies
+function setCookie(name, value, days) {
+  const date = new Date();
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  const expires = "expires=" + date.toUTCString();
+  document.cookie = name + "=" + value + ";" + expires + ";path=/";
+  location.reload()
+}
+
+function getCookie(name) {
+  const cname = name + "=";
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const cookieArray = decodedCookie.split(';');
+  for (let i = 0; i < cookieArray.length; i++) {
+    let cookie = cookieArray[i].trim();
+    if (cookie.indexOf(cname) === 0) {
+      return cookie.substring(cname.length, cookie.length);
+    }
+  }
+  return "";
+}
+
+document.getElementById("pincode-submit").addEventListener("click", function() {
+  const pincodeValue = document.getElementById("pincode-input").value;
+  if (pincodeValue) {
+    setCookie("discomValue", pincodeValue, 7); // Set cookie for 7 days
+  }
+
+  console.log("Pincode saved to cookies:", pincodeValue);
+  const divBlock = document.querySelector('.div-block-169');
+  divBlock.style.display = 'none';
+});
+
+function keralaCode() {
+  const dropdown = document.getElementById("dropdown-option");
+  if (dropdown) {
+    // Retrieve and set the saved value on page load
+    const savedValue = getCookie("discomValue");
+    if (savedValue) {
+      dropdown.value = savedValue;
+      const divBlock = document.querySelector('.div-block-169');
+    }
+
+    dropdown.addEventListener("change", function() {
+      console.log("Dropdown value changed");
+      const selectedValue = this.value;
+      if (selectedValue) {
+        setCookie("discomValue", selectedValue, 7); // Set cookie for 7 days
+      }
+      console.log("Dropdown value saved to cookies:", selectedValue);
+
+      const divBlock = document.querySelector('.div-block-169');
+    });
+  } else {
+    console.error("Dropdown element not found");
   }
 }
