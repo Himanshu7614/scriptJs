@@ -6,9 +6,12 @@ function main() {
   let getDiscom
   if (location === "delhi") {
     getDiscom = getCookie("discomValueDl")
+    document.getElementById('discom-header-value').innerText = getDiscom;
 
   } else {
     getDiscom = getCookie("discomValueKl")
+    document.getElementById('discom-header-value').innerText = getDiscom;
+
 
   }
   if (!getDiscom) {
@@ -53,7 +56,7 @@ function main() {
 }
 
 let offset = 0;
-const limit = 8;
+const limit = 24;
 
 async function dynamicQuery(filters) {
   const location = localStorage.getItem("location");
@@ -64,14 +67,6 @@ async function dynamicQuery(filters) {
     table = "kerala_products"
   }
 
-  // var inputElement = document.getElementById("monthly-bill");
-  // var billValue = calculateSizeE(inputElement.value);
-  // inputElement.id = billValue
-  // var elFilterValue = inputElement.getAttribute("el-filter");
-
-
-
-  console.log(filters)
   let query = window.supabaseClient
     .from(table)
     .select("*")
@@ -90,10 +85,7 @@ async function dynamicQuery(filters) {
     }
 
   }
-  // if (billValue) {
-  //   query.eq(elFilterValue, billValue);
-  // }
-
+  console.log(filters, "FVSdfV kjfvs fljvsnfvs ")
   filters.forEach(condition => {
     const [key, value] = Object.entries(condition)[0];
     if (Array.isArray(value)) {
@@ -103,14 +95,17 @@ async function dynamicQuery(filters) {
     }
     console.log(query);
   });
+  if (filters.length === 0) { query.gt('core_randomise', 0.615150125) };
   const { data, error } = await query.range(offset, offset + limit - 1);
+
+  const filterData = filterAndPrintData(data);
 
   if (error) {
     console.error("Error fetching data:", error);
   } else {
-    console.log("Fetched data:", data);
+    console.log("Fetched data:", filterData);
     const cardMask = document.getElementById('card-div');
-    data.forEach(async (item) => {
+    filterData.forEach(async (item) => {
       const card = await createCard(item);
       if (card) {
         cardMask.appendChild(card);
@@ -496,6 +491,7 @@ function showFilter(paramsObject) {
         filterName.style.alignItems = "center";
         filterName.style.gap = "3px";
         filterName.style.cursor = "pointer";
+        filterName.style.whiteSpace = "nowrap";
 
         // Handling both single and array values
         let printValue;
@@ -1037,7 +1033,6 @@ function monthlyBill() {
   newInput.className = 'text-field-10 w-input';
   newInput.name = 'name';
   newInput.placeholder = 'Monthly Electricity Bill';
-  newInput.style.backgroundColor = 'black';
 
   // Add an onchange event listener to the new input
   newInput.addEventListener('change', function() {
@@ -1248,4 +1243,37 @@ async function removeProductFromWishlist(productId, location, phoneNumber) {
   } catch (error) {
     console.error("Unexpected error:", error);
   }
+}
+
+
+function filterAndPrintData(data) {
+  let result = [];
+
+  // Iterate through the range of specs_ac_capacity values from 3 to 22
+  for (let acCapacity = 3; acCapacity <= 22; acCapacity++) {
+    // Convert acCapacity to string since specs_ac_capacity is a string in the data
+    let acCapacityStr = acCapacity.toString();
+
+    // Filter data by specs_ac_capacity
+    const filteredDataByCapacity = data.filter(
+      (item) => item.specs_ac_capacity == acCapacityStr
+    );
+
+    // Get unique specs_panel_type values
+    const uniquePanelTypes = [
+      ...new Set(filteredDataByCapacity.map((item) => item.specs_panel_type)),
+    ];
+
+    // For each unique specs_panel_type, filter the data and sort by specs_panel_type
+    uniquePanelTypes.forEach((panelType) => {
+      const filteredDataByPanelType = filteredDataByCapacity.filter(
+        (item) => item.specs_panel_type === panelType
+      );
+
+      // Append the filtered and sorted data to the result array
+      result = result.concat(filteredDataByPanelType);
+    });
+  }
+
+  return result;
 }
