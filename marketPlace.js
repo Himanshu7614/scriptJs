@@ -1,6 +1,6 @@
 let urlData
 function main() {
-    console.log("gekki")
+    localStorage.setItem("HImahus", "choudhary");
     const discomdiv = document.getElementById("check-discom");
     discomdiv.style.display = "flex"
     const location = localStorage.getItem("location");
@@ -496,25 +496,35 @@ function getEnergyBoard(pincode) {
 main();
 
 function markCheck(paramsObject) {
+    // Get a list of all elements that have been styled
+    const allStyledElements = document.querySelectorAll('[el-filter]');
+
+    // Collect all IDs currently in the paramsObject
+    const activeIds = new Set();
+
     paramsObject.forEach(obj => {
         const key = Object.keys(obj)[0];
         const value = obj[key];
-        console.log("value: " + value);
 
         if (Array.isArray(value)) {
-            // If the value is an array, iterate over each item
-            value.forEach(item => {
-                const div = document.getElementById(item);
-                if (div) {
-                    div.style.backgroundColor = 'black';
-                }
-            });
+            value.forEach(item => activeIds.add(item));
         } else {
-            // If the value is not an array, directly use it
-            const div = document.getElementById(value);
-            if (div) {
-                div.style.backgroundColor = 'black';
-            }
+            activeIds.add(value);
+        }
+    });
+
+    // Reset the background color for elements that are not active
+    allStyledElements.forEach(div => {
+        if (!activeIds.has(div.id)) {
+            div.style.backgroundColor = ''; // Reset background color for inactive elements
+        }
+    });
+
+    // Apply the active filter styles
+    activeIds.forEach(id => {
+        const div = document.getElementById(id);
+        if (div) {
+            div.style.backgroundColor = 'black';
         }
     });
 }
@@ -616,9 +626,44 @@ document.getElementById("openSidebar").addEventListener("click", () => {
     }
 });
 
-function handleDivClick(event) {
+// function handleDivClick(event) {
 
+//     const clickedElement = event.target;
+//     if (clickedElement.id === "monthly-bill") {
+//         clickedElement.addEventListener('change', function() {
+//             const inputValue = clickedElement.value;
+//             createUrl("specs_ac_capacity", calculateSizeE(inputValue));
+//         });
+//     }
+
+//     checkButton()
+//     if (clickedElement.hasAttribute("el-filter")) {
+//         const elFilterValue = clickedElement.getAttribute("el-filter");
+//         const id = clickedElement.getAttribute("id");
+
+//         // Check if the filter is already applied
+//         if (isFilterApplied(elFilterValue, id)) {
+//             removeFilter(elFilterValue, id); // Remove the filter if it is already applied
+//         } else {
+//             createUrl(elFilterValue, id); // Add the filter if not applied
+//         }
+//     }
+// }
+
+// document
+//     .querySelector(".div-block-150")
+//     .addEventListener("click", handleDivClick);
+
+// function removeFilter(elFilterValue, id) {
+//     // Implement logic to remove the filter from the URL or state
+//     const urlParams = new URLSearchParams(window.location.search);
+//     urlParams.delete(elFilterValue);
+//     updateUrl(urlParams.toString());
+// }
+
+function handleDivClick(event) {
     const clickedElement = event.target;
+
     if (clickedElement.id === "monthly-bill") {
         clickedElement.addEventListener('change', function() {
             const inputValue = clickedElement.value;
@@ -626,17 +671,22 @@ function handleDivClick(event) {
         });
     }
 
-    checkButton()
+
+
     if (clickedElement.hasAttribute("el-filter")) {
         const elFilterValue = clickedElement.getAttribute("el-filter");
         const id = clickedElement.getAttribute("id");
+
+        // Create or remove filter based on its current state
         createUrl(elFilterValue, id);
-        return elFilterValue;
     }
 }
+
 document
     .querySelector(".div-block-150")
     .addEventListener("click", handleDivClick);
+
+
 document.getElementById('load-more').addEventListener('click', () => {
     console.log("load more more laod")
     offset += limit; // Increase offset by limit
@@ -650,41 +700,59 @@ let finalURl
 
 // Function to create URL parameters
 function createUrl(elFilterValue, value) {
+    checkButton();
     let param = null;
-    for (let item of urlParams) {
-        if (item[elFilterValue]) {
-            param = item;
+    let paramIndex = -1;
+
+    // Find the filter in the existing urlParams array
+    for (let i = 0; i < urlParams.length; i++) {
+        if (urlParams[i][elFilterValue]) {
+            param = urlParams[i];
+            paramIndex = i;
             break;
         }
     }
 
     if (param) {
-        if (!param[elFilterValue].includes(value)) {
+        // Check if the value is already in the filter array
+        const valueIndex = param[elFilterValue].indexOf(value);
+        if (valueIndex !== -1) {
+            // If the value exists, remove it
+            param[elFilterValue].splice(valueIndex, 1);
+
+            // If the array becomes empty, remove the entire filter object
+            if (param[elFilterValue].length === 0) {
+                urlParams.splice(paramIndex, 1);
+            }
+        } else {
+            // If the value doesn't exist, add it
             param[elFilterValue].push(value);
         }
     } else {
+        // If the filter doesn't exist, add it
         let newParam = {};
         newParam[elFilterValue] = [value];
         urlParams.push(newParam);
-        console.log("Updated urlParams:", urlParams);
     }
-
-    console.log(urlParams);
-    markCheck(urlParams)
-
+    selectionCondition()
+    console.log("Updated urlParams:", urlParams);
+    markCheck(urlParams);
     serachFilter(urlParams);
 }
 
+
 // function createUrl(elFilterValue, value) {
+//     let paramIndex = null;
 //     let param = null;
 
 //     // Find if the filter is already in urlParams
-//     for (let item of urlParams) {
-//         if (item[elFilterValue]) {
-//             param = item;
+//     for (let i = 0; i < urlParams.length; i++) {
+//         if (urlParams[i][elFilterValue]) {
+//             paramIndex = i;
+//             param = urlParams[i];
 //             break;
 //         }
-//     }
+//     } 
 
 //     if (param) {
 //         const valueIndex = param[elFilterValue].indexOf(value);
@@ -695,7 +763,6 @@ function createUrl(elFilterValue, value) {
 
 //             // If the array is empty after removal, remove the whole parameter
 //             if (param[elFilterValue].length === 0) {
-//                 const paramIndex = urlParams.indexOf(param);
 //                 urlParams.splice(paramIndex, 1);
 //             }
 //         } else {
@@ -714,6 +781,50 @@ function createUrl(elFilterValue, value) {
 
 //     serachFilter(urlParams);
 // }
+
+// function createUrl(elFilterValue, value) {
+//     let param = null;
+//     let paramIndex = -1;
+
+//     // Find the filter in the existing urlParams array
+//     for (let i = 0; i < urlParams.length; i++) {
+//         if (urlParams[i][elFilterValue]) {
+//             param = urlParams[i];
+//             paramIndex = i;
+//             break;
+//         }
+//     }
+
+//     // If the filter is found
+//     if (param) {
+//         // Check if the value is already in the filter array
+//         const valueIndex = param[elFilterValue].indexOf(value);
+//         if (valueIndex !== -1) {
+//             // If the value exists, remove it
+//             param[elFilterValue].splice(valueIndex, 1);
+
+//             // If the array becomes empty, remove the entire filter object
+//             if (param[elFilterValue].length === 0) {
+//                 urlParams.splice(paramIndex, 1);
+//             }
+//         } else {
+//             // If the value doesn't exist, add it
+//             param[elFilterValue].push(value);
+//         }
+//     } else {
+//         // If the filter doesn't exist, add it
+//         let newParam = {};
+//         newParam[elFilterValue] = [value];
+//         urlParams.push(newParam);
+//     }
+
+//     console.log("Updated urlParams:", urlParams);
+//     markCheck(urlParams);
+//     serachFilter(urlParams);
+// }
+
+
+
 
 function serachFilter(urlParams) {
     const queryString = urlParams
@@ -909,39 +1020,39 @@ async function createCard(item) {
     return card;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const shortingButton = document.getElementById("shorting");
-    if (shortingButton) {
-        let count = 0; // Move count outside the event listener to maintain state between clicks
-        shortingButton.addEventListener("click", () => {
-            console.log("sorting sorting");
+// document.addEventListener("DOMContentLoaded", () => {
+//     const shortingButton = document.getElementById("shorting");
+//     if (shortingButton) {
+//         let count = 0; // Move count outside the event listener to maintain state between clicks
+//         shortingButton.addEventListener("click", () => {
+//             console.log("sorting sorting");
 
-            let isOpen;
-            if (count % 2) {
-                isOpen = true;
-            } else {
-                isOpen = false;
-            }
+//             let isOpen;
+//             if (count % 2) {
+//                 isOpen = true;
+//             } else {
+//                 isOpen = false;
+//             }
 
-            const sortingCard = document.getElementById("sorting-card");
-            console.log(sortingCard);
-            if (sortingCard) {
-                if (isOpen) {
-                    sortingCard.style.display = "flex";
-                } else {
-                    sortingCard.style.display = "none";
-                }
-            } else {
-                console.error("Element with ID 'sorting-card' not found");
-            }
+//             const sortingCard = document.getElementById("sorting-card");
+//             console.log(sortingCard);
+//             if (sortingCard) {
+//                 if (isOpen) {
+//                     sortingCard.style.display = "flex";
+//                 } else {
+//                     sortingCard.style.display = "none";
+//                 }
+//             } else {
+//                 console.error("Element with ID 'sorting-card' not found");
+//             }
 
-            count++;
-            console.log(count);
-        });
-    } else {
-        console.error("Element with ID 'shorting' not found");
-    }
-});
+//             count++;
+//             console.log(count);
+//         });
+//     } else {
+//         console.error("Element with ID 'shorting' not found");
+//     }
+// });
 
 
 function checkButton() {
@@ -1334,24 +1445,106 @@ function filterAndPrintData(data) {
     return top25Products;
 }
 
-const sortingOpen = document.getElementById('sorting-open');
-const sortingCard = document.getElementById('sorting-card');
+// const sortingOpen = document.getElementById('sorting-open');
+// const sortingCard = document.getElementById('sorting-card');
 
-sortingOpen.addEventListener('click', () => {
-    if (sortingCard.style.display === 'none' || sortingCard.style.display === '') {
-        sortingCard.style.display = 'flex'; // Show the sorting card
-    } else {
-        sortingCard.style.display = 'none'; // Hide the sorting card
-    }
-});
+// sortingOpen.addEventListener('click', () => {
+//     if (sortingCard.style.display === 'none' || sortingCard.style.display === '') {
+//         sortingCard.style.display = 'flex'; // Show the sorting card
+//     } else {
+//         sortingCard.style.display = 'none'; // Hide the sorting card
+//     }
+// });
 
-const acsElement = document.getElementById('acs');
+// const acsElement = document.getElementById('acs');
 
-acsElement.addEventListener('click', () => {
-    // Add the value "acs" to localStorage under the key "filter"
-    localStorage.filter = 'acs'; // Directly setting the localStorage value
-    window.location = window.location;
+// acsElement.addEventListener('click', () => {
+//     // Add the value "acs" to localStorage under the key "filter"
+//     localStorage.filter = 'acs'; // Directly setting the localStorage value
+//     window.location = window.location;
 
-    // Reload the page
-    // location.reload();
-});
+//     // Reload the page
+//     // location.reload();
+// });
+
+function selectionCondition() {
+    console.log("selectionCondition");
+    urlParams.forEach((param) => {
+        // Extract key and value from each object in urlParams
+        const key = Object.keys(param)[0];
+        const values = param[key];
+        console.log(values, key);
+
+        // Check if the key matches "core_product_grid_type"
+        if (key === "core_product_grid_type") {
+            if (values.length === 1) {
+                values.forEach((value) => {
+                    if (value === "Ongrid") {
+                        const offGrid = document.querySelector('#Offgrid-Inverter[el-filter="specs_inverter_type"]');
+                        const hybrid = document.querySelector('#Hybrid-Inverter[el-filter="specs_inverter_type"]');
+                        if (offGrid) {
+                            offGrid.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            offGrid.style.pointerEvents = "none";
+                            offGrid.style.backgroundColor = "#D3D3D3";    // Disable pointer events
+                        }
+                        if (hybrid) {
+                            hybrid.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            hybrid.style.pointerEvents = "none";    // Disable pointer events
+                            hybrid.style.backgroundColor = "#D3D3D3";
+                        }
+                    }
+                    if (value === "Offgrid") {
+                        const String = document.getElementById('String');
+                        const Microinverter = document.getElementById('Microinverter');
+                        if (String) {
+                            String.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            String.style.pointerEvents = "none";    // Disable pointer events
+                            String.style.backgroundColor = "#D3D3D3";
+                        }
+                        if (Microinverter) {
+                            Microinverter.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            Microinverter.style.pointerEvents = "none";    // Disable pointer events
+                            Microinverter.style.backgroundColor = "#D3D3D3";
+                        }
+                    }
+                    if (value === "Hybrid") {
+                        const offGrid = document.querySelector('#Offgrid-Inverter[el-filter="specs_inverter_type"]');
+                        const String = document.getElementById('String');
+                        const Microinverter = document.getElementById('Microinverter');
+                        if (offGrid) {
+                            offGrid.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            offGrid.style.pointerEvents = "none";    // Disable pointer events
+                            offGrid.style.backgroundColor = "#D3D3D3";
+                        }
+                        if (String) {
+                            String.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            String.style.pointerEvents = "none";    // Disable pointer events
+                            String.style.backgroundColor = "#D3D3D3";
+                        }
+                        if (Microinverter) {
+                            Microinverter.style.cursor = "not-allowed";    // Show 'not-allowed' cursor
+                            Microinverter.style.pointerEvents = "none";    // Disable pointer events
+                            Microinverter.style.backgroundColor = "#D3D3D3";
+                        }
+                    }
+                });
+            } else if (values.length > 1) {
+                // Reset styles if there are multiple values
+                const elementsToReset = [
+                    document.querySelector('#Offgrid[el-filter="specs_inverter_type"]'),
+                    document.querySelector('#Hybrid[el-filter="specs_inverter_type"]'),
+                    document.getElementById('String'),
+                    document.getElementById('Microinverter')
+                ];
+
+                elementsToReset.forEach((element) => {
+                    if (element) {
+                        element.style.cursor = "default";   // Reset cursor
+                        element.style.pointerEvents = "auto";  // Enable pointer events
+                        Microinverter.style.backgroundColor = "";
+                    }
+                });
+            }
+        }
+    });
+}
